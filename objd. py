@@ -1,0 +1,29 @@
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs_py.point_cloud2 as pc2
+
+class DistanceNode(Node):
+    def __init__(self):
+        super().__init__('distance_node')
+        self.subscription = self.create_subscription(
+            PointCloud2,
+            '/camera/depth/color/points',
+            self.pointcloud_callback,
+            10)
+
+    def pointcloud_callback(self, msg):
+        points = pc2.read_points(msg, field_names=("x","y","z"), skip_nans=True)
+        min_dist = float('inf')
+        for p in points:
+            dist = (p[0]**2 + p[1]**2 + p[2]**2)**0.5
+            if dist < min_dist:
+                min_dist = dist
+        self.get_logger().info(f"Closest obstacle: {min_dist:.2f} meters")
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = DistanceNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
